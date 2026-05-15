@@ -1,0 +1,7 @@
+{
+  "buildCommand": "npm --prefix financeiro run build",
+  "outputDirectory": "financeiro/.next",
+  "installCommand": "npm --prefix financeiro install",
+  "framework": "nextjs",
+  "devCommand": "npm --prefix financeiro run dev"
+}
