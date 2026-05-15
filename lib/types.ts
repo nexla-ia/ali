@@ -29,6 +29,7 @@ export interface IncomeEntry {
   year: number
   amount: number
   description: string
+  recorrente: boolean
   created_at: string
 }
 

@@ -77,7 +77,7 @@ export function getMonthSummary(
   variableExpenses: VariableExpense[]
 ): MonthSummary {
   const incomeAmount = income
-    .filter((i) => i.month === month && i.year === year)
+    .filter((i) => i.recorrente || (i.month === month && i.year === year))
     .reduce((sum, e) => sum + e.amount, 0)
 
   const fixed = fixedExpenses
