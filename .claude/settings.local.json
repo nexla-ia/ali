@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir C:\\\\financeiro 2>&1; ls C:\\\\financeiro)",
+      "Bash(npx next *)",
+      "Bash(dir C:\\\\financeiro /s /b)",
+      "PowerShell(Move-Item -Path \"C:\\\\financeiro\" -Destination \"C:\\\\Users\\\\Admne\\\\OneDrive\\\\Desktop\\\\ali\\\\financeiro\" -Force)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\Admne\\\\OneDrive\\\\Desktop\\\\ali\\\\.git\\\\index.lock\" -Force)",
+      "Bash(git reset *)",
+      "Bash(git rm *)",
+      "PowerShell(Copy-Item -Force \"C:\\\\Users\\\\Admne\\\\OneDrive\\\\Desktop\\\\ali\\\\financeiro\\\\.env.local\" \"C:\\\\Users\\\\Admne\\\\OneDrive\\\\Desktop\\\\ali\\\\.env.local\")",
+      "Bash(git ls-tree *)",
+      "Bash(npx vercel *)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\Admne\\OneDrive\\Desktop\\ali",
+      "C:\\financeiro",
+      "C:\\Users\\Admne\\OneDrive\\Desktop\\ali\\.git"
+    ]
+  }
+}
