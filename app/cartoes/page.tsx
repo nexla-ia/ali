@@ -13,8 +13,13 @@ import PageHeader from '@/components/PageHeader'
 import {
   Plus, Trash2, ChevronRight, CreditCard as CardIcon,
   Upload, Check, AlertCircle, FileText, CheckSquare, Square,
+  AlertTriangle,
 } from 'lucide-react'
 import clsx from 'clsx'
+
+// ── Unnecessary-expense helpers (stored as :desnec suffix in category) ────────
+const isUnnec    = (tx: CardTransaction) => tx.category.endsWith(':desnec')
+const baseCat    = (tx: CardTransaction) => tx.category.replace(':desnec', '')
 
 const COLORS: CardColor[] = ['gold', 'blue', 'green', 'red', 'purple']
 const COLOR_HEX: Record<CardColor, string> = {
@@ -57,6 +62,11 @@ export default function CartoesPage() {
 
   async function deleteTx(id: string) {
     await supabase.from('card_transactions').delete().eq('id', id)
+    load()
+  }
+  async function toggleUnnec(tx: CardTransaction) {
+    const newCat = isUnnec(tx) ? baseCat(tx) : tx.category + ':desnec'
+    await supabase.from('card_transactions').update({ category: newCat }).eq('id', tx.id)
     load()
   }
   async function deleteCard(id: string) {
@@ -195,42 +205,89 @@ export default function CartoesPage() {
                         <Upload size={11} /> Importar extrato CSV
                       </button>
                     </div>
-                  ) : selectedTransactions.map((tx) => (
-                    <div
-                      key={tx.id}
-                      className="group flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors"
-                      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
-                    >
-                      <div className="min-w-0 mr-3">
-                        <p className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{tx.description}</p>
-                        <p className="text-[10px] mt-0.5 uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-                          {tx.category}{tx.installments > 1 && ` · ${tx.current_installment}/${tx.installments}x`}
-                        </p>
+                  ) : selectedTransactions.map((tx) => {
+                    const unnec = isUnnec(tx)
+                    return (
+                      <div
+                        key={tx.id}
+                        className="group flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors"
+                        style={{
+                          background: unnec ? 'rgba(244,63,94,0.05)' : 'var(--surface-2)',
+                          border: `1px solid ${unnec ? 'rgba(244,63,94,0.2)' : 'var(--border)'}`,
+                        }}
+                      >
+                        <div className="min-w-0 mr-3">
+                          <p className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{tx.description}</p>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
+                              {baseCat(tx)}{tx.installments > 1 && ` · ${tx.current_installment}/${tx.installments}x`}
+                            </p>
+                            {/* Unnecessary toggle tag */}
+                            <button
+                              onClick={() => toggleUnnec(tx)}
+                              className="flex items-center gap-1 rounded-full px-2 py-0.5 transition-all"
+                              style={unnec ? {
+                                background: 'rgba(244,63,94,0.12)',
+                                border: '1px solid rgba(244,63,94,0.35)',
+                                color: 'var(--rose)',
+                              } : {
+                                background: 'transparent',
+                                border: '1px solid var(--border)',
+                                color: 'var(--text-3)',
+                              }}
+                            >
+                              <AlertTriangle size={8} />
+                              <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                                {unnec ? 'evitável' : 'marcar'}
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="mono text-sm font-medium" style={{ color: unnec ? 'var(--rose)' : 'var(--text)', fontFamily: '"Fira Code"' }}>
+                            {fmt(tx.total_amount)}
+                          </span>
+                          <button
+                            onClick={() => deleteTx(tx.id)}
+                            className="delete-btn opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{ color: 'var(--rose)' }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="mono text-sm font-medium" style={{ color: 'var(--text)', fontFamily: '"Fira Code"' }}>
-                          {fmt(tx.total_amount)}
-                        </span>
-                        <button
-                          onClick={() => deleteTx(tx.id)}
-                          className="delete-btn opacity-0 group-hover:opacity-100 transition-opacity"
-                          style={{ color: 'var(--rose)' }}
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
-                {selectedTransactions.length > 0 && (
-                  <div className="flex justify-between items-center pt-4" style={{ borderTop: '1px solid var(--border)' }}>
-                    <span className="text-xs uppercase tracking-widest font-medium" style={{ color: 'var(--text-2)' }}>Total fatura</span>
-                    <span style={{ fontFamily: '"Barlow Condensed"', fontWeight: 700, fontSize: 24, color: hex }}>
-                      {fmt(selectedTotal)}
-                    </span>
-                  </div>
-                )}
+                {selectedTransactions.length > 0 && (() => {
+                  const unnecTotal = selectedTransactions
+                    .filter(isUnnec)
+                    .reduce((s, t) => s + t.total_amount, 0)
+                  return (
+                    <div className="pt-4 space-y-2" style={{ borderTop: '1px solid var(--border)' }}>
+                      {unnecTotal > 0 && (
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-1.5">
+                            <AlertTriangle size={11} style={{ color: 'var(--rose)' }} />
+                            <span className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--rose)' }}>
+                              Evitáveis
+                            </span>
+                          </div>
+                          <span style={{ fontFamily: '"Fira Code"', fontSize: 13, fontWeight: 600, color: 'var(--rose)' }}>
+                            {fmt(unnecTotal)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs uppercase tracking-widest font-medium" style={{ color: 'var(--text-2)' }}>Total fatura</span>
+                        <span style={{ fontFamily: '"Barlow Condensed"', fontWeight: 700, fontSize: 24, color: hex }}>
+                          {fmt(selectedTotal)}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
             )
           })() : (
