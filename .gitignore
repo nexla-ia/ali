@@ -4,16 +4,15 @@ node_modules/
 .pnp.js
 
 # Next.js
-financeiro/.next/
-financeiro/out/
+.next/
+out/
 
 # Build
-financeiro/build/
+build/
 
 # Env files
-financeiro/.env.local
-financeiro/.env.*.local
-*.env.local
+.env.local
+.env.*.local
 
 # Debug
 npm-debug.log*
@@ -27,3 +26,6 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Old subdirectory (moved to root)
+financeiro/
