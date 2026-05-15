@@ -55,7 +55,7 @@ export default function RendaPage() {
   function openEdit(entry: IncomeEntry) {
     setEditing(entry)
     setAddMonth(null)
-    setAddRecorrente(entry.recorrente)
+    setAddRecorrente(entry.year === 0)
     setModalOpen(true)
   }
 
