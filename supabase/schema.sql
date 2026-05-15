@@ -35,7 +35,7 @@ CREATE TABLE income_entries (
   amount DECIMAL(10,2) NOT NULL,
   description TEXT NOT NULL DEFAULT 'Salário',
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(month, year)
+  -- removed UNIQUE(month, year) to allow multiple income sources per month
 );
 
 -- Despesas fixas recorrentes (ativas todo mês)

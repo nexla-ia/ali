@@ -343,7 +343,14 @@ function IncomeModal({ open, onClose, onSaved, editing, defaultMonth, defaultYea
       ? await supabase.from('income_entries').update(data).eq('id', editing.id)
       : await supabase.from('income_entries').insert(data)
     setSaving(false)
-    if (err) { setError(err.message); return }
+    if (err) {
+      setError(
+        err.message.includes('unique') || err.message.includes('duplicate')
+          ? 'Já existe uma entrada para este mês. Rode no Supabase: ALTER TABLE income_entries DROP CONSTRAINT income_entries_month_year_key;'
+          : err.message
+      )
+      return
+    }
     onSaved(); onClose()
   }
 
