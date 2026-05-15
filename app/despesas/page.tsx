@@ -49,7 +49,7 @@ export default function DespesasPage() {
   }
 
   return (
-    <div className="px-8 py-8 max-w-5xl mx-auto">
+    <div className="px-4 py-5 md:px-8 md:py-8 max-w-5xl mx-auto">
       <PageHeader title="Despesas" subtitle="Fixos recorrentes e variáveis por mês" />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -105,7 +105,7 @@ export default function DespesasPage() {
                     </span>
                     <button
                       onClick={() => deleteFixed(e.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="delete-btn opacity-0 group-hover:opacity-100 transition-opacity"
                       style={{ color: 'var(--rose)' }}
                     >
                       <Trash2 size={13} />
@@ -174,7 +174,7 @@ export default function DespesasPage() {
                     </span>
                     <button
                       onClick={() => deleteVariable(e.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="delete-btn opacity-0 group-hover:opacity-100 transition-opacity"
                       style={{ color: 'var(--rose)' }}
                     >
                       <Trash2 size={13} />

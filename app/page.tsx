@@ -78,7 +78,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="px-8 py-8 max-w-5xl mx-auto space-y-4">
+    <div className="px-4 py-5 md:px-8 md:py-8 max-w-5xl mx-auto space-y-4">
 
       {/* Top bar */}
       <div className="flex items-center justify-between anim-fade-up">

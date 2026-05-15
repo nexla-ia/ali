@@ -63,7 +63,7 @@ export default function CartoesPage() {
   }
 
   return (
-    <div className="px-8 py-8 max-w-5xl mx-auto">
+    <div className="px-4 py-5 md:px-8 md:py-8 max-w-5xl mx-auto">
       <PageHeader
         title="Cartões"
         subtitle="Faturas e compras parceladas"
@@ -211,7 +211,7 @@ export default function CartoesPage() {
                         </span>
                         <button
                           onClick={() => deleteTx(tx.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="delete-btn opacity-0 group-hover:opacity-100 transition-opacity"
                           style={{ color: 'var(--rose)' }}
                         >
                           <Trash2 size={13} />

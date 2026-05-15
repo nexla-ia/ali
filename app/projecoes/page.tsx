@@ -86,7 +86,7 @@ export default function ProjecoesPage() {
   }
 
   return (
-    <div className="px-8 py-8 max-w-5xl mx-auto space-y-4">
+    <div className="px-4 py-5 md:px-8 md:py-8 max-w-5xl mx-auto space-y-4">
       <PageHeader
         title="Projeções"
         subtitle="Visão financeira dos próximos meses"

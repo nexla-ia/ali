@@ -37,7 +37,7 @@ export default function RendaPage() {
   }
 
   return (
-    <div className="px-8 py-8 max-w-3xl mx-auto">
+    <div className="px-4 py-5 md:px-8 md:py-8 max-w-3xl mx-auto">
       <PageHeader
         title="Renda"
         subtitle="Registre sua renda mensal"
@@ -116,7 +116,7 @@ export default function RendaPage() {
                   <p className="text-[10px] mt-1 truncate" style={{ color: 'var(--text-3)' }}>
                     {entry.description}
                   </p>
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-2 right-2 flex gap-1 delete-btn opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => { setEditing(entry); setModalOpen(true) }}
                       className="w-6 h-6 rounded-lg flex items-center justify-center transition-colors"
