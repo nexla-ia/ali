@@ -76,8 +76,9 @@ export function getMonthSummary(
   cardTransactions: CardTransaction[],
   variableExpenses: VariableExpense[]
 ): MonthSummary {
-  const incomeEntry = income.find((i) => i.month === month && i.year === year)
-  const incomeAmount = incomeEntry?.amount ?? 0
+  const incomeAmount = income
+    .filter((i) => i.month === month && i.year === year)
+    .reduce((sum, e) => sum + e.amount, 0)
 
   const fixed = fixedExpenses
     .filter((e) => e.active)

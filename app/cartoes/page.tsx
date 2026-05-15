@@ -554,7 +554,7 @@ function CsvImportModal({ open, onClose, onSaved, cardId, defaultMonth, defaultY
 
           {error && (
             <div className="flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'var(--rose-dim)', border: '1px solid rgba(244,63,94,0.25)' }}>
-              <AlertCircle size={14} style={{ color: 'var(--rose)', marginTop: 1, shrink: 0 }} />
+              <AlertCircle size={14} className="shrink-0" style={{ color: 'var(--rose)', marginTop: 1 }} />
               <p className="text-xs" style={{ color: 'var(--rose)' }}>{error}</p>
             </div>
           )}
