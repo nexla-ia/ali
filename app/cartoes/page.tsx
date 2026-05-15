@@ -2,14 +2,18 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { fmt, getNextMonths, monthLabel, MONTH_NAMES } from '@/lib/finance'
+import { parseCsv, inferExpenseSign } from '@/lib/csv'
 import type { CardColor, CreditCard, CardTransaction } from '@/lib/types'
 import { CARD_COLORS } from '@/lib/types'
 import Modal from '@/components/Modal'
 import PageHeader from '@/components/PageHeader'
-import { Plus, Trash2, ChevronRight, CreditCard as CardIcon } from 'lucide-react'
+import {
+  Plus, Trash2, ChevronRight, CreditCard as CardIcon,
+  Upload, Check, AlertCircle, FileText, CheckSquare, Square,
+} from 'lucide-react'
 import clsx from 'clsx'
 
 const COLORS: CardColor[] = ['gold', 'blue', 'green', 'red', 'purple']
@@ -18,12 +22,13 @@ const COLOR_HEX: Record<CardColor, string> = {
 }
 
 export default function CartoesPage() {
-  const [cards, setCards] = useState<CreditCard[]>([])
+  const [cards, setCards]               = useState<CreditCard[]>([])
   const [transactions, setTransactions] = useState<CardTransaction[]>([])
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null)
-  const [addCardOpen, setAddCardOpen] = useState(false)
-  const [addTxOpen, setAddTxOpen] = useState(false)
-  const [viewMonth, setViewMonth] = useState(() => {
+  const [addCardOpen, setAddCardOpen]   = useState(false)
+  const [addTxOpen, setAddTxOpen]       = useState(false)
+  const [csvOpen, setCsvOpen]           = useState(false)
+  const [viewMonth, setViewMonth]       = useState(() => {
     const n = new Date()
     return { month: n.getMonth() + 1, year: n.getFullYear() }
   })
@@ -105,13 +110,8 @@ export default function CartoesPage() {
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <div
-                      className="w-8 h-5 rounded-md"
-                      style={{ background: `${hex}18`, border: `1.5px solid ${hex}50` }}
-                    />
-                    <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
-                      {card.name}
-                    </span>
+                    <div className="w-8 h-5 rounded-md" style={{ background: `${hex}18`, border: `1.5px solid ${hex}50` }} />
+                    <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{card.name}</span>
                   </div>
                   <ChevronRight size={13} style={{ color: 'var(--text-3)' }} />
                 </div>
@@ -121,12 +121,8 @@ export default function CartoesPage() {
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="mono text-[11px]" style={{ color: 'var(--text-2)', fontFamily: '"Fira Code"' }}>
-                    {fmt(monthTotal)}
-                  </span>
-                  <span className="mono text-[10px]" style={{ color: 'var(--text-3)', fontFamily: '"Fira Code"' }}>
-                    fecha {card.closing_day} · vence {card.due_day}
-                  </span>
+                  <span className="mono text-[11px]" style={{ color: 'var(--text-2)', fontFamily: '"Fira Code"' }}>{fmt(monthTotal)}</span>
+                  <span className="mono text-[10px]" style={{ color: 'var(--text-3)', fontFamily: '"Fira Code"' }}>fecha {card.closing_day} · vence {card.due_day}</span>
                 </div>
               </button>
             )
@@ -140,16 +136,15 @@ export default function CartoesPage() {
             return (
               <div className="card h-full" style={{ minHeight: 400 }}>
                 {/* Header */}
-                <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center justify-between mb-5 gap-2 flex-wrap">
                   <div>
-                    <h2 className="font-semibold text-base" style={{ color: 'var(--text)' }}>
-                      {selectedCard.name}
-                    </h2>
-                    <p className="mono text-xs mt-0.5" style={{ color: 'var(--text-2)', fontFamily: '"Fira Code"' }}>
-                      limite {fmt(selectedCard.limit_amount)}
-                    </p>
+                    <h2 className="font-semibold text-base" style={{ color: 'var(--text)' }}>{selectedCard.name}</h2>
+                    <p className="mono text-xs mt-0.5" style={{ color: 'var(--text-2)', fontFamily: '"Fira Code"' }}>limite {fmt(selectedCard.limit_amount)}</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
+                    <button className="btn-ghost" onClick={() => setCsvOpen(true)}>
+                      <Upload size={12} /> Importar CSV
+                    </button>
                     <button className="btn-lime" onClick={() => setAddTxOpen(true)}>
                       <Plus size={12} /> Lançar
                     </button>
@@ -188,10 +183,17 @@ export default function CartoesPage() {
                 {/* Transactions */}
                 <div className="space-y-1.5 mb-4">
                   {selectedTransactions.length === 0 ? (
-                    <div className="flex items-center justify-center py-10">
+                    <div className="flex flex-col items-center justify-center py-10 gap-3">
                       <p className="text-sm" style={{ color: 'var(--text-3)' }}>
                         Nenhuma transação em {MONTH_NAMES[viewMonth.month - 1]}/{viewMonth.year}
                       </p>
+                      <button
+                        onClick={() => setCsvOpen(true)}
+                        className="flex items-center gap-1.5 text-xs font-medium transition-colors"
+                        style={{ color: 'var(--lime)' }}
+                      >
+                        <Upload size={11} /> Importar extrato CSV
+                      </button>
                     </div>
                   ) : selectedTransactions.map((tx) => (
                     <div
@@ -199,13 +201,13 @@ export default function CartoesPage() {
                       className="group flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors"
                       style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
                     >
-                      <div>
-                        <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>{tx.description}</p>
+                      <div className="min-w-0 mr-3">
+                        <p className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{tx.description}</p>
                         <p className="text-[10px] mt-0.5 uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
                           {tx.category}{tx.installments > 1 && ` · ${tx.current_installment}/${tx.installments}x`}
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 shrink-0">
                         <span className="mono text-sm font-medium" style={{ color: 'var(--text)', fontFamily: '"Fira Code"' }}>
                           {fmt(tx.total_amount)}
                         </span>
@@ -223,13 +225,8 @@ export default function CartoesPage() {
 
                 {selectedTransactions.length > 0 && (
                   <div className="flex justify-between items-center pt-4" style={{ borderTop: '1px solid var(--border)' }}>
-                    <span className="text-xs uppercase tracking-widest font-medium" style={{ color: 'var(--text-2)' }}>
-                      Total fatura
-                    </span>
-                    <span
-                      className="font-display font-700"
-                      style={{ fontFamily: '"Barlow Condensed"', fontWeight: 700, fontSize: 24, color: hex }}
-                    >
+                    <span className="text-xs uppercase tracking-widest font-medium" style={{ color: 'var(--text-2)' }}>Total fatura</span>
+                    <span style={{ fontFamily: '"Barlow Condensed"', fontWeight: 700, fontSize: 24, color: hex }}>
                       {fmt(selectedTotal)}
                     </span>
                   </div>
@@ -246,24 +243,36 @@ export default function CartoesPage() {
 
       <AddCardModal open={addCardOpen} onClose={() => setAddCardOpen(false)} onSaved={load} />
       {selectedCard && (
-        <AddTransactionModal
-          open={addTxOpen}
-          onClose={() => setAddTxOpen(false)}
-          onSaved={load}
-          cardId={selectedCard.id}
-        />
+        <>
+          <AddTransactionModal
+            open={addTxOpen}
+            onClose={() => setAddTxOpen(false)}
+            onSaved={load}
+            cardId={selectedCard.id}
+          />
+          <CsvImportModal
+            open={csvOpen}
+            onClose={() => setCsvOpen(false)}
+            onSaved={load}
+            cardId={selectedCard.id}
+            defaultMonth={viewMonth.month}
+            defaultYear={viewMonth.year}
+          />
+        </>
       )}
     </div>
   )
 }
 
+// ── Add Card ─────────────────────────────────────────────────────────────────
+
 function AddCardModal({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
-  const [name, setName] = useState('')
-  const [limit, setLimit] = useState('')
+  const [name, setName]       = useState('')
+  const [limit, setLimit]     = useState('')
   const [closing, setClosing] = useState('20')
-  const [due, setDue] = useState('27')
-  const [color, setColor] = useState<CardColor>('gold')
-  const [saving, setSaving] = useState(false)
+  const [due, setDue]         = useState('27')
+  const [color, setColor]     = useState<CardColor>('gold')
+  const [saving, setSaving]   = useState(false)
 
   async function save() {
     if (!name || !limit) return
@@ -286,16 +295,16 @@ function AddCardModal({ open, onClose, onSaved }: { open: boolean; onClose: () =
         </div>
         <div>
           <label className="label">Limite (R$)</label>
-          <input className="input mono" placeholder="5.000,00" value={limit} onChange={e => setLimit(e.target.value)} style={{ fontFamily: '"Fira Code"' }} />
+          <input className="input" placeholder="5.000,00" value={limit} onChange={e => setLimit(e.target.value)} style={{ fontFamily: '"Fira Code"' }} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">Fecha dia</label>
-            <input className="input mono" type="number" min={1} max={31} value={closing} onChange={e => setClosing(e.target.value)} style={{ fontFamily: '"Fira Code"' }} />
+            <input className="input" type="number" min={1} max={31} value={closing} onChange={e => setClosing(e.target.value)} style={{ fontFamily: '"Fira Code"' }} />
           </div>
           <div>
             <label className="label">Vence dia</label>
-            <input className="input mono" type="number" min={1} max={31} value={due} onChange={e => setDue(e.target.value)} style={{ fontFamily: '"Fira Code"' }} />
+            <input className="input" type="number" min={1} max={31} value={due} onChange={e => setDue(e.target.value)} style={{ fontFamily: '"Fira Code"' }} />
           </div>
         </div>
         <div>
@@ -323,17 +332,19 @@ function AddCardModal({ open, onClose, onSaved }: { open: boolean; onClose: () =
   )
 }
 
+// ── Add Transaction ──────────────────────────────────────────────────────────
+
 function AddTransactionModal({ open, onClose, onSaved, cardId }: {
   open: boolean; onClose: () => void; onSaved: () => void; cardId: string
 }) {
   const now = new Date()
-  const [desc, setDesc] = useState('')
-  const [amount, setAmount] = useState('')
-  const [installments, setInstallments] = useState('1')
-  const [category, setCategory] = useState('outros')
+  const [desc, setDesc]             = useState('')
+  const [amount, setAmount]         = useState('')
+  const [installments, setInstall]  = useState('1')
+  const [category, setCategory]     = useState('outros')
   const [startMonth, setStartMonth] = useState(now.getMonth() + 1)
-  const [startYear, setStartYear] = useState(now.getFullYear())
-  const [saving, setSaving] = useState(false)
+  const [startYear, setStartYear]   = useState(now.getFullYear())
+  const [saving, setSaving]         = useState(false)
 
   async function save() {
     if (!desc || !amount) return
@@ -346,12 +357,12 @@ function AddTransactionModal({ open, onClose, onSaved, cardId }: {
     })
     await supabase.from('card_transactions').insert(rows)
     setSaving(false)
-    setDesc(''); setAmount(''); setInstallments('1')
+    setDesc(''); setAmount(''); setInstall('1')
     onSaved(); onClose()
   }
 
   const n = parseInt(installments) || 1
-  const perInstallment = amount ? parseFloat(amount.replace(',', '.')) / n : 0
+  const per = amount ? parseFloat(amount.replace(',', '.')) / n : 0
 
   return (
     <Modal open={open} onClose={onClose} title="Lançar Compra">
@@ -367,7 +378,7 @@ function AddTransactionModal({ open, onClose, onSaved, cardId }: {
           </div>
           <div>
             <label className="label">Parcelas</label>
-            <input className="input" type="number" min={1} max={48} value={installments} onChange={e => setInstallments(e.target.value)} style={{ fontFamily: '"Fira Code"' }} />
+            <input className="input" type="number" min={1} max={48} value={installments} onChange={e => setInstall(e.target.value)} style={{ fontFamily: '"Fira Code"' }} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -391,14 +402,257 @@ function AddTransactionModal({ open, onClose, onSaved, cardId }: {
           </select>
         </div>
         {n > 1 && amount && (
-          <div className="rounded-xl px-3 py-2.5 text-center mono text-xs" style={{ background: 'var(--surface-2)', color: 'var(--teal)', fontFamily: '"Fira Code"', border: '1px solid var(--border)' }}>
-            {n}x de {fmt(perInstallment)} / mês
+          <div className="rounded-xl px-3 py-2.5 text-center text-xs" style={{ background: 'var(--surface-2)', color: 'var(--teal)', fontFamily: '"Fira Code"', border: '1px solid var(--border)' }}>
+            {n}x de {fmt(per)} / mês
           </div>
         )}
         <button className="btn-lime w-full justify-center" onClick={save} disabled={saving}>
           {saving ? 'Salvando...' : 'Lançar compra'}
         </button>
       </div>
+    </Modal>
+  )
+}
+
+// ── CSV Import ───────────────────────────────────────────────────────────────
+
+interface ParsedRow { description: string; amount: number; rawAmount: number }
+
+function CsvImportModal({ open, onClose, onSaved, cardId, defaultMonth, defaultYear }: {
+  open: boolean; onClose: () => void; onSaved: () => void
+  cardId: string; defaultMonth: number; defaultYear: number
+}) {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [step, setStep]           = useState<'upload' | 'preview'>('upload')
+  const [rows, setRows]           = useState<ParsedRow[]>([])
+  const [selected, setSelected]   = useState<Set<number>>(new Set())
+  const [invoiceMonth, setMonth]  = useState(defaultMonth)
+  const [invoiceYear, setYear]    = useState(defaultYear)
+  const [saving, setSaving]       = useState(false)
+  const [error, setError]         = useState('')
+  const [dragging, setDragging]   = useState(false)
+
+  function reset() {
+    setStep('upload'); setRows([]); setSelected(new Set())
+    setError(''); setSaving(false)
+  }
+
+  function handleClose() { reset(); onClose() }
+
+  function processFile(file: File) {
+    if (!file.name.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
+      setError('Selecione um arquivo .csv')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      const parsed = parseCsv(text)
+      if (!parsed.length) {
+        setError('Não foi possível identificar as colunas. Verifique se o arquivo é um extrato CSV válido.')
+        return
+      }
+      setError('')
+      setRows(parsed)
+      // Pre-select expense rows (negative for Nubank, positive for others)
+      const sign = inferExpenseSign(parsed)
+      const presel = new Set(
+        parsed
+          .map((r, i) => ({ r, i }))
+          .filter(({ r }) => sign === 'negative' ? r.rawAmount < 0 : r.rawAmount > 0)
+          .map(({ i }) => i)
+      )
+      // If nothing pre-selected, select all
+      setSelected(presel.size > 0 ? presel : new Set(parsed.map((_, i) => i)))
+      setStep('preview')
+    }
+    reader.onerror = () => setError('Erro ao ler o arquivo.')
+    reader.readAsText(file, 'UTF-8')
+  }
+
+  function onFileInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    if (f) processFile(f)
+    e.target.value = ''
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault(); setDragging(false)
+    const f = e.dataTransfer.files?.[0]
+    if (f) processFile(f)
+  }
+
+  function toggleRow(i: number) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(i) ? next.delete(i) : next.add(i)
+      return next
+    })
+  }
+
+  function toggleAll() {
+    setSelected(prev => prev.size === rows.length ? new Set() : new Set(rows.map((_, i) => i)))
+  }
+
+  async function importRows() {
+    const toImport = rows.filter((_, i) => selected.has(i))
+    if (!toImport.length) return
+    setSaving(true)
+    const inserts = toImport.map(row => ({
+      card_id: cardId,
+      description: row.description,
+      total_amount: row.amount,
+      installments: 1,
+      current_installment: 1,
+      invoice_month: invoiceMonth,
+      invoice_year: invoiceYear,
+      category: 'outros',
+    }))
+    await supabase.from('card_transactions').insert(inserts)
+    setSaving(false)
+    onSaved()
+    handleClose()
+  }
+
+  const totalSelected = rows
+    .filter((_, i) => selected.has(i))
+    .reduce((s, r) => s + r.amount, 0)
+
+  return (
+    <Modal open={open} onClose={handleClose} title="Importar Extrato CSV">
+      {step === 'upload' ? (
+        <div className="space-y-4">
+          {/* Drop zone */}
+          <div
+            onClick={() => fileRef.current?.click()}
+            onDragOver={e => { e.preventDefault(); setDragging(true) }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            className="flex flex-col items-center justify-center gap-3 rounded-2xl cursor-pointer transition-all"
+            style={{
+              border: `2px dashed ${dragging ? 'var(--lime)' : 'var(--border-2)'}`,
+              background: dragging ? 'var(--lime-dim)' : 'var(--surface-2)',
+              padding: '32px 20px',
+            }}
+          >
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center"
+              style={{ background: 'var(--surface-3)' }}
+            >
+              <FileText size={22} style={{ color: 'var(--lime)' }} />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+                Selecionar arquivo CSV
+              </p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-2)' }}>
+                ou arraste e solte aqui
+              </p>
+            </div>
+            <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={onFileInput} />
+          </div>
+
+          {error && (
+            <div className="flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'var(--rose-dim)', border: '1px solid rgba(244,63,94,0.25)' }}>
+              <AlertCircle size={14} style={{ color: 'var(--rose)', marginTop: 1, shrink: 0 }} />
+              <p className="text-xs" style={{ color: 'var(--rose)' }}>{error}</p>
+            </div>
+          )}
+
+          {/* Info */}
+          <div className="rounded-xl px-3 py-3 space-y-1" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+            <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-2)' }}>
+              Formatos suportados
+            </p>
+            <p className="text-xs" style={{ color: 'var(--text-3)', lineHeight: 1.6 }}>
+              Nubank, Inter, C6, Itaú, Bradesco e qualquer CSV com colunas de descrição e valor. Separador vírgula ou ponto-e-vírgula.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Month selector */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <label className="label">Mês da fatura</label>
+              <select className="input" value={invoiceMonth} onChange={e => setMonth(Number(e.target.value))}>
+                {MONTH_NAMES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+              </select>
+            </div>
+            <div style={{ width: 80 }}>
+              <label className="label">Ano</label>
+              <input className="input" type="number" value={invoiceYear} onChange={e => setYear(Number(e.target.value))} style={{ fontFamily: '"Fira Code"' }} />
+            </div>
+          </div>
+
+          {/* Select all + summary */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={toggleAll}
+              className="flex items-center gap-1.5 text-xs transition-colors"
+              style={{ color: 'var(--text-2)' }}
+            >
+              {selected.size === rows.length
+                ? <CheckSquare size={13} style={{ color: 'var(--lime)' }} />
+                : <Square size={13} />
+              }
+              {selected.size === rows.length ? 'Desmarcar todos' : 'Marcar todos'}
+            </button>
+            <span className="mono text-xs" style={{ color: 'var(--text-2)', fontFamily: '"Fira Code"' }}>
+              {selected.size}/{rows.length} · {fmt(totalSelected)}
+            </span>
+          </div>
+
+          {/* Row list */}
+          <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
+            {rows.map((row, i) => {
+              const on = selected.has(i)
+              return (
+                <button
+                  key={i}
+                  onClick={() => toggleRow(i)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
+                  style={{
+                    background: on ? 'var(--surface-2)' : 'transparent',
+                    border: `1px solid ${on ? 'var(--border)' : 'transparent'}`,
+                    opacity: on ? 1 : 0.45,
+                  }}
+                >
+                  <div
+                    className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all"
+                    style={{
+                      background: on ? 'var(--lime)' : 'var(--surface-3)',
+                      border: `1px solid ${on ? 'var(--lime)' : 'var(--border-2)'}`,
+                    }}
+                  >
+                    {on && <Check size={10} color="#07080D" strokeWidth={3} />}
+                  </div>
+                  <span className="text-sm flex-1 truncate" style={{ color: 'var(--text)' }}>
+                    {row.description}
+                  </span>
+                  <span className="mono text-sm shrink-0" style={{ color: 'var(--text)', fontFamily: '"Fira Code"' }}>
+                    {fmt(row.amount)}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-1">
+            <button className="btn-ghost flex-1 justify-center" onClick={reset}>
+              Voltar
+            </button>
+            <button
+              className="btn-lime flex-1 justify-center"
+              onClick={importRows}
+              disabled={saving || selected.size === 0}
+            >
+              {saving ? 'Importando...' : `Importar ${selected.size}`}
+            </button>
+          </div>
+        </div>
+      )}
     </Modal>
   )
 }
