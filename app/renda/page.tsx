@@ -229,6 +229,7 @@ export default function RendaPage() {
       </div>
 
       <IncomeModal
+        key={`${modalOpen ? 1 : 0}-${addMonth ?? 0}-${editing?.id ?? 'new'}`}
         open={modalOpen}
         onClose={() => { setModalOpen(false); setEditing(null); setAddMonth(null) }}
         onSaved={load}
