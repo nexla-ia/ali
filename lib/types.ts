@@ -26,10 +26,9 @@ export interface CardTransaction {
 export interface IncomeEntry {
   id: string
   month: number
-  year: number
+  year: number   // year === 0 means recurring (applies to every month)
   amount: number
   description: string
-  recorrente: boolean
   created_at: string
 }
 

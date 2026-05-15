@@ -32,10 +32,10 @@ export default function RendaPage() {
 
   useEffect(() => { load() }, [load])
 
-  const recurring   = entries.filter(e => e.recorrente)
+  const recurring      = entries.filter(e => e.year === 0)
   const recurringTotal = recurring.reduce((s, e) => s + e.amount, 0)
 
-  const yearExtras  = entries.filter(e => !e.recorrente && e.year === viewYear)
+  const yearExtras  = entries.filter(e => e.year === viewYear)
   const extrasTotal = yearExtras.reduce((s, e) => s + e.amount, 0)
   const totalYear   = recurringTotal * 12 + extrasTotal
   const avgMonth    = recurringTotal + extrasTotal / 12
@@ -327,20 +327,23 @@ function IncomeModal({ open, onClose, onSaved, editing, defaultMonth, defaultYea
   const [description, setDescription] = useState(editing?.description ?? 'Salário')
   const [recorrente, setRecorrente] = useState(defaultRecorrente)
   const [saving, setSaving]         = useState(false)
+  const [error, setError]           = useState('')
 
   async function save() {
     if (!amount) return
+    setError('')
     setSaving(true)
     const data = {
-      month: recorrente ? 1 : month,
-      year:  recorrente ? 0 : year,
+      month:  recorrente ? 1 : month,
+      year:   recorrente ? 0 : year,   // year=0 marks recurring
       amount: parseFloat(amount.replace(',', '.')),
       description,
-      recorrente,
     }
-    if (editing) await supabase.from('income_entries').update(data).eq('id', editing.id)
-    else await supabase.from('income_entries').insert(data)
+    const { error: err } = editing
+      ? await supabase.from('income_entries').update(data).eq('id', editing.id)
+      : await supabase.from('income_entries').insert(data)
     setSaving(false)
+    if (err) { setError(err.message); return }
     onSaved(); onClose()
   }
 
@@ -414,6 +417,11 @@ function IncomeModal({ open, onClose, onSaved, editing, defaultMonth, defaultYea
             onChange={e => setDescription(e.target.value)}
           />
         </div>
+        {error && (
+          <p className="text-xs rounded-xl px-3 py-2.5" style={{ background: 'var(--rose-dim)', color: 'var(--rose)', border: '1px solid rgba(244,63,94,0.25)' }}>
+            {error}
+          </p>
+        )}
         <button className="btn-lime w-full justify-center" onClick={save} disabled={saving}>
           {saving ? 'Salvando...' : editing ? 'Atualizar' : 'Registrar'}
         </button>
